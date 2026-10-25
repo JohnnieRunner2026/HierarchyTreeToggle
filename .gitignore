@@ -12,6 +12,8 @@
 
 /*
 !/.gitignore
+!/README.md
+!/docs/
 !/Assets/
 /Assets/*
 !/Assets/Editor/
