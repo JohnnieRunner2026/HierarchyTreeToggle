@@ -1,0 +1,49 @@
+# ================================================================
+# This repo tracks ONLY the JohnnieRunner Hierarchy Active Toggle tool.
+# Copy Assets/Editor/JohnnieRunnerHierarchyActiveToggle.cs + Assets/Editor/Icons/
+# into any Unity project's Assets/Editor folder and it works — it needs
+# nothing but Unity's editor API (tested on Unity 2020.3).
+# Everything else in the surrounding project is deliberately excluded.
+# ================================================================
+
+/*
+!/.gitignore
+!/Assets/
+/Assets/*
+!/Assets/Editor/
+/Assets/Editor/*
+!/Assets/Editor/JohnnieRunnerHierarchyActiveToggle.cs
+!/Assets/Editor/JohnnieRunnerHierarchyActiveToggle.cs.meta
+!/Assets/Editor/Icons/
+!/Assets/Editor/Icons.meta
+
+# ----------------------------------------------------------------
+# Belt and braces: Unity plumbing, in case the include rules above
+# ever get edited.
+# ----------------------------------------------------------------
+/Library/
+/Temp/
+/Logs/
+/Obj/
+/Builds/
+/UserSettings/
+/Packages/
+/ProjectSettings/
+/CONTEXT/
+/PROJECTS/
+/Captures/
+/.workbuddy/
+*.csproj
+*.sln
+*.user
+*.pidb
+*.booproj
+sysinfo.txt
+*.apk
+*.aab
+.DS_Store
+Thumbs.db
+desktop.ini
+.vs/
+.idea/
+.vscode/
