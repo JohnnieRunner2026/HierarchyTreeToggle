@@ -82,10 +82,13 @@ internal static class JohnnieRunnerHierarchyActiveToggle
             ? new Color(1f, 1f, 1f, 0.18f)
             : new Color(0f, 0f, 0f, 0.20f);
 
-        // Rails for the ancestors above the parent. Unity only calls us for rows
-        // it actually paints, so a full-height rail stays correct while a branch
-        // is collapsed.
-        for (int up = 1; up <= depth - 1; up++)
+        // Rails for every ancestor column. The visual indent has one extra step
+        // on top of the transform depth (the Hierarchy's scene-name pseudo row),
+        // so the loop has to run up to depth *inclusive* — otherwise the trunk
+        // stops dead at a parent row and leaves a dangling stub when that parent
+        // is expanded. Unity only calls us for rows it actually paints, so a
+        // full-height rail stays correct while a branch is collapsed.
+        for (int up = 1; up <= depth; up++)
         {
             float railX = elbowX - k_Indent * up;
             EditorGUI.DrawRect(new Rect(railX, row.y, k_LineWidth, row.height), color);
