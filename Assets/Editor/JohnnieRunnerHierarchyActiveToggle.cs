@@ -21,15 +21,20 @@ internal static class JohnnieRunnerHierarchyActiveToggle
     // ---- eye toggle ----
     const float k_IconSize = 16f;
     const float k_RightPad = 2f;
+    const float k_ScrollbarWidth = 14f;
     const string k_EyeOnPath = "Assets/Editor/Icons/EyeOn.png";
     const string k_EyeOffPath = "Assets/Editor/Icons/EyeOff.png";
 
+    // Both PNGs are 32x32 with the glyph occupying only a small middle band.
+    // UVs point at that band so the eye is not shrunk into a few pixels.
+    static readonly Rect k_EyeOnUv = new Rect(8f / 32f, 12f / 32f, 16f / 32f, 9f / 32f);
+    static readonly Rect k_EyeOffUv = new Rect(7f / 32f, 11f / 32f, 18f / 32f, 10f / 32f);
+
     // ---- tree guide metrics ----
-    // Unity 2020.3 renders one hierarchy indent step as 14px, and the depth-0
-    // foldout arrow sits at ~14px. If a future Unity version changes the
-    // indent, tweak k_Indent / k_BaseIndent and the guides line up again.
+    // Unity 2020.3 indents one hierarchy step by 14px. The guide is positioned
+    // relative to the row rect Unity hands us, so only this step ever needs
+    // tuning if a future version changes the indent.
     const float k_Indent = 14f;
-    const float k_BaseIndent = 14f;
     const float k_LineWidth = 1f;
     const float k_StubLength = 7f;
 
@@ -49,7 +54,7 @@ internal static class JohnnieRunnerHierarchyActiveToggle
     {
         var target = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
         if (target == null)
-            return;
+            return; // scene-name pseudo row: nothing to draw against
 
         DrawTreeGuide(target, row);
         DrawEyeToggle(target, row);
@@ -64,40 +69,49 @@ internal static class JohnnieRunnerHierarchyActiveToggle
             return;
 
         var t = target.transform;
-        if (t.parent == null)
-            return; // scene root has nothing to connect to
-
         int depth = GetDepth(t);
-        if (depth <= 0)
-            return;
+
+        // Unity already indents every row (14px per level) and it also shows
+        // scene roots one level in, under the "scene name" pseudo row. So row.x
+        // encodes the visual column already — derive the gutter from it instead
+        // of adding offsets, otherwise the guide lands on top of the label.
+        float elbowX = row.x - k_Indent * 0.5f;
 
         var color = EditorGUIUtility.isProSkin
-            ? new Color(1f, 1f, 1f, 0.13f)
-            : new Color(0f, 0f, 0f, 0.15f);
+            ? new Color(1f, 1f, 1f, 0.18f)
+            : new Color(0f, 0f, 0f, 0.20f);
 
-        // Vertical rails for every ancestor level. Because Unity only calls us
-        // for rows it actually draws, a full-height rail is automatically
-        // correct even when the branch above is collapsed.
-        for (int level = 0; level < depth - 1; level++)
+        // Rails for the ancestors above the parent. Unity only calls us for rows
+        // it actually paints, so a full-height rail stays correct while a branch
+        // is collapsed.
+        for (int up = 1; up <= depth - 1; up++)
         {
-            float railX = row.x + k_BaseIndent + level * k_Indent + k_Indent * 0.5f;
+            float railX = elbowX - k_Indent * up;
             EditorGUI.DrawRect(new Rect(railX, row.y, k_LineWidth, row.height), color);
         }
 
-        // The elbow joining this row to its parent.
-        float cx = row.x + k_BaseIndent + (depth - 1) * k_Indent + k_Indent * 0.5f;
         float elbowY = row.y + row.height * 0.5f;
 
         // Upper arm is always drawn; the lower arm only when a sibling follows,
         // which is what turns a plain rail into a "last child" corner.
-        EditorGUI.DrawRect(new Rect(cx, row.y, k_LineWidth, elbowY - row.y), color);
+        EditorGUI.DrawRect(new Rect(elbowX, row.y, k_LineWidth, elbowY - row.y), color);
 
-        bool isLastSibling = t.GetSiblingIndex() == t.parent.childCount - 1;
-        if (!isLastSibling)
-            EditorGUI.DrawRect(new Rect(cx, elbowY, k_LineWidth, row.yMax - elbowY), color);
+        if (!IsLastSibling(t))
+            EditorGUI.DrawRect(new Rect(elbowX, elbowY, k_LineWidth, row.yMax - elbowY), color);
 
-        // Horizontal stub pointing at the child's own foldout gutter.
-        EditorGUI.DrawRect(new Rect(cx, elbowY, k_StubLength, k_LineWidth), color);
+        // Horizontal stub pointing at this row's own foldout gutter.
+        EditorGUI.DrawRect(new Rect(elbowX, elbowY, k_StubLength, k_LineWidth), color);
+    }
+
+    static bool IsLastSibling(Transform t)
+    {
+        // Scene roots report their index in the scene's root list, and
+        // scene.rootCount is the sibling count — same rule as a normal child.
+        if (t.parent != null)
+            return t.GetSiblingIndex() == t.parent.childCount - 1;
+
+        var scene = t.gameObject.scene;
+        return t.GetSiblingIndex() == scene.rootCount - 1;
     }
 
     static int GetDepth(Transform t)
@@ -120,7 +134,7 @@ internal static class JohnnieRunnerHierarchyActiveToggle
     static void DrawEyeToggle(GameObject target, Rect row)
     {
         float size = Mathf.Min(k_IconSize, row.height - 2f);
-        var box = new Rect(row.xMax - size - k_RightPad, row.y + (row.height - size) * 0.5f, size, size);
+        var box = IconBox(row, size);
 
         var current = Event.current;
         if (current.type == EventType.MouseDown && current.button == 0 && box.Contains(current.mousePosition))
@@ -131,6 +145,17 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         }
 
         DrawIcon(box, target.activeSelf);
+    }
+
+    /// <summary>
+    /// Where the eye sits for a row. row.xMax includes Unity's vertical scrollbar
+    /// gutter, so reserve that width or the icon gets clipped at the panel edge.
+    /// </summary>
+    static Rect IconBox(Rect row, float size)
+    {
+        float right = row.xMax - k_ScrollbarWidth - k_RightPad;
+        float h = size * (k_EyeOnUv.height / k_EyeOnUv.width);
+        return new Rect(right - size, row.y + (row.height - h) * 0.5f, size, h);
     }
 
     static void DrawIcon(Rect box, bool active)
@@ -148,12 +173,17 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         if (icon == null)
             return;
 
+        // Both PNGs are 32x32 with the glyph squeezed into a small middle band,
+        // so draw only that band instead of the whole padded quad.
+        var uv = active ? k_EyeOnUv : k_EyeOffUv;
+        var quad = new Rect(box.x, box.y, box.width, box.width * (uv.height / uv.width));
+
         // Icons are solid white; tint so they read on both editor skins.
         var previous = GUI.color;
         GUI.color = EditorGUIUtility.isProSkin
-            ? new Color(0.78f, 0.78f, 0.78f)
-            : new Color(0.30f, 0.30f, 0.30f);
-        GUI.DrawTexture(box, icon, ScaleMode.ScaleToFit, true);
+            ? new Color(0.82f, 0.82f, 0.82f)
+            : new Color(0.28f, 0.28f, 0.28f);
+        GUI.DrawTextureWithTexCoords(quad, icon, uv, true);
         GUI.color = previous;
     }
 
