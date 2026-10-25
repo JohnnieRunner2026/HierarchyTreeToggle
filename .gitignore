@@ -4,6 +4,10 @@
 # into any Unity project's Assets/Editor folder and it works — it needs
 # nothing but Unity's editor API (tested on Unity 2020.3).
 # Everything else in the surrounding project is deliberately excluded.
+#
+# The dmxClass9 Cosmic Poro VFX system lives in its OWN separate repo:
+#   Backups/dmxClass9-repo/
+# It is deliberately NOT tracked here — the two stay independent.
 # ================================================================
 
 /*
@@ -32,6 +36,7 @@
 /CONTEXT/
 /PROJECTS/
 /Captures/
+/Backups/
 /.workbuddy/
 *.csproj
 *.sln
