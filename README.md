@@ -5,8 +5,6 @@ A small editor extension for Unity 2020.3 that adds two things to every row of t
 - **Tree guide lines** drawn in the indent gutter, so parent/child structure is readable without expanding anything.
 - **An eye toggle** on the right edge of each row — one click shows or hides that GameObject.
 
-![Unity Hierarchy with tree guide lines and per-row eye toggles](docs/hierarchy-tree.png)
-
 Editor-only, no runtime overhead, no menu item to configure — drop the folder in and it is already working.
 
 ## Features
