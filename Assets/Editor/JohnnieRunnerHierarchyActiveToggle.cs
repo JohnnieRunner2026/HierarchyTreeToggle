@@ -32,11 +32,12 @@ internal static class JohnnieRunnerHierarchyActiveToggle
 
     // ---- tree guide metrics ----
     // Unity 2020.3 indents one hierarchy step by 14px and draws a row's foldout
-    // arrow in the 14px cell immediately left of the row rect, occupying about
-    // row.x-11 .. row.x-3. The guide column therefore has to sit at row.x-15 so
-    // it clears the arrow instead of running through it.
+    // arrow in the 14px cell immediately left of the row rect (about
+    // row.x-11 .. row.x-3). Putting the guide column 21px left of the row lines
+    // it up with the centre of the *parent's* arrow cell, so the branch visibly
+    // hangs from the parent object instead of hugging the child's own arrow.
     const float k_Indent = 14f;
-    const float k_GuideOffset = 15f;
+    const float k_GuideOffset = 21f;
     const float k_LineWidth = 1f;
 
     static Texture2D s_EyeOn;
@@ -99,9 +100,9 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         if (!IsLastSibling(t))
             EditorGUI.DrawRect(new Rect(elbowX, elbowY, k_LineWidth, row.yMax - elbowY), color);
 
-        // Horizontal stub pointing at the row. Rows that own a foldout only get a
-        // 2px nub, otherwise the arm would cut straight through the arrow glyph.
-        float arm = hasFoldout ? 2f : k_GuideOffset;
+        // Horizontal stub pointing at the row. Rows that own a foldout stop the
+        // arm just before their own arrow glyph; leaves run all the way to the label.
+        float arm = hasFoldout ? k_GuideOffset - k_Indent + 2f : k_GuideOffset;
         EditorGUI.DrawRect(new Rect(elbowX, elbowY, arm, k_LineWidth), color);
     }
 
