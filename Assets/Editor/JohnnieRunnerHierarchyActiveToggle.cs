@@ -31,12 +31,13 @@ internal static class JohnnieRunnerHierarchyActiveToggle
     static readonly Rect k_EyeOffUv = new Rect(7f / 32f, 11f / 32f, 18f / 32f, 10f / 32f);
 
     // ---- tree guide metrics ----
-    // Unity 2020.3 indents one hierarchy step by 14px. The guide is positioned
-    // relative to the row rect Unity hands us, so only this step ever needs
-    // tuning if a future version changes the indent.
+    // Unity 2020.3 indents one hierarchy step by 14px and draws a row's foldout
+    // arrow in the 14px cell immediately left of the row rect, occupying about
+    // row.x-11 .. row.x-3. The guide column therefore has to sit at row.x-15 so
+    // it clears the arrow instead of running through it.
     const float k_Indent = 14f;
+    const float k_GuideOffset = 15f;
     const float k_LineWidth = 1f;
-    const float k_StubLength = 7f;
 
     static Texture2D s_EyeOn;
     static Texture2D s_EyeOff;
@@ -71,11 +72,10 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         var t = target.transform;
         int depth = GetDepth(t);
 
-        // Unity already indents every row (14px per level) and it also shows
-        // scene roots one level in, under the "scene name" pseudo row. So row.x
-        // encodes the visual column already — derive the gutter from it instead
-        // of adding offsets, otherwise the guide lands on top of the label.
-        float elbowX = row.x - k_Indent * 0.5f;
+        // row.x is where the row's own content starts; one indent to the left is
+        // the cell that holds this row's foldout arrow (if it has children).
+        float elbowX = row.x - k_GuideOffset;
+        bool hasFoldout = t.childCount > 0;
 
         var color = EditorGUIUtility.isProSkin
             ? new Color(1f, 1f, 1f, 0.18f)
@@ -99,8 +99,10 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         if (!IsLastSibling(t))
             EditorGUI.DrawRect(new Rect(elbowX, elbowY, k_LineWidth, row.yMax - elbowY), color);
 
-        // Horizontal stub pointing at this row's own foldout gutter.
-        EditorGUI.DrawRect(new Rect(elbowX, elbowY, k_StubLength, k_LineWidth), color);
+        // Horizontal stub pointing at the row. Rows that own a foldout only get a
+        // 2px nub, otherwise the arm would cut straight through the arrow glyph.
+        float arm = hasFoldout ? 2f : k_GuideOffset;
+        EditorGUI.DrawRect(new Rect(elbowX, elbowY, arm, k_LineWidth), color);
     }
 
     static bool IsLastSibling(Transform t)
