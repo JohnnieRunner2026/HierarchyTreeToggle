@@ -43,15 +43,32 @@ internal static class JohnnieRunnerHierarchyActiveToggle
     static Texture2D s_EyeOn;
     static Texture2D s_EyeOff;
 
-    // instanceID -> depth, cleared whenever the hierarchy changes.
-    static readonly Dictionary<int, int> s_DepthCache = new Dictionary<int, int>();
+    // transform -> depth, cleared whenever the hierarchy changes.
+    static readonly Dictionary<Transform, int> s_DepthCache = new Dictionary<Transform, int>();
 
     static JohnnieRunnerHierarchyActiveToggle()
     {
+#if UNITY_6000_0_OR_NEWER
+        // Unity 6 replaced the InstanceID row callback with an EntityId one and
+        // marks the old members obsolete-as-error, so the two paths coexist here.
+        EditorApplication.hierarchyWindowItemByEntityIdOnGUI += OnHierarchyRowByEntityId;
+#else
         EditorApplication.hierarchyWindowItemOnGUI += OnHierarchyRow;
+#endif
         EditorApplication.hierarchyChanged += s_DepthCache.Clear;
     }
 
+#if UNITY_6000_0_OR_NEWER
+    static void OnHierarchyRowByEntityId(UnityEngine.EntityId entityId, Rect row)
+    {
+        var target = EditorUtility.EntityIdToObject(entityId) as GameObject;
+        if (target == null)
+            return; // scene-name pseudo row: nothing to draw against
+
+        DrawTreeGuide(target, row);
+        DrawEyeToggle(target, row);
+    }
+#else
     static void OnHierarchyRow(int instanceID, Rect row)
     {
         var target = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
@@ -61,6 +78,7 @@ internal static class JohnnieRunnerHierarchyActiveToggle
         DrawTreeGuide(target, row);
         DrawEyeToggle(target, row);
     }
+#endif
 
     // ---------------------------------------------------------------- tree
 
@@ -122,16 +140,15 @@ internal static class JohnnieRunnerHierarchyActiveToggle
 
     static int GetDepth(Transform t)
     {
-        int id = t.GetInstanceID();
         int depth;
-        if (s_DepthCache.TryGetValue(id, out depth))
+        if (s_DepthCache.TryGetValue(t, out depth))
             return depth;
 
         depth = 0;
         for (var p = t.parent; p != null; p = p.parent)
             depth++;
 
-        s_DepthCache[id] = depth;
+        s_DepthCache[t] = depth;
         return depth;
     }
 
